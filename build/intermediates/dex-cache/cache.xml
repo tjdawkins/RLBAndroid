@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<items version="2" >
+
+    <item
+        jar="/home/dean/RLP/app/build/intermediates/exploded-aar/com.jjoe64/graphview/4.0.1/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="37bf8de5b4f9e7e93006db783b9b3168e32e38e9">
+        <dex dex="/home/dean/RLP/app/build/intermediates/pre-dexed/debug/classes-593ee6ac65303512c2def8b98389ff5e54bd25a2.jar" />
+    </item>
+    <item
+        jar="/home/dean/Android/Sdk/extras/android/m2repository/com/android/support/support-annotations/22.2.0/support-annotations-22.2.0.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="66b42a1f3eb7676070b7ef7f14b603483aecbee1">
+        <dex dex="/home/dean/RLP/app/build/intermediates/pre-dexed/debug/support-annotations-22.2.0-c02015aee0f04d445ecd7072cebc54a888386c45.jar" />
+    </item>
+    <item
+        jar="/home/dean/RLP/app/build/intermediates/exploded-aar/com.android.support/appcompat-v7/22.2.0/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="73753982da6bde518f3a4c6b372749981d14d1a0">
+        <dex dex="/home/dean/RLP/app/build/intermediates/pre-dexed/debug/classes-3e9fe9ce55c1abe9fd2f4d7355bb58ce3fb79867.jar" />
+    </item>
+    <item
+        jar="/home/dean/RLP/app/build/intermediates/exploded-aar/com.android.support/support-v4/22.2.0/jars/classes.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="1ee588ff2c4daf7b97c1cbf922a6c7f027285c2f">
+        <dex dex="/home/dean/RLP/app/build/intermediates/pre-dexed/debug/classes-c92d4e2dd40561600e28768523032c771dd4a967.jar" />
+    </item>
+    <item
+        jar="/home/dean/RLP/app/build/intermediates/exploded-aar/com.android.support/support-v4/22.2.0/jars/libs/internal_impl-22.2.0.jar"
+        jumboMode="false"
+        revision="22.0.1"
+        sha1="57f2ab85c164ff1676ec64dee787981c046fab79">
+        <dex dex="/home/dean/RLP/app/build/intermediates/pre-dexed/debug/internal_impl-22.2.0-52790bb8300c46cb1c50e59a61f7ab38d8a7cafd.jar" />
+    </item>
+
+</items>
