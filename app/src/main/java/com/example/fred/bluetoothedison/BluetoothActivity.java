@@ -3,8 +3,11 @@ package com.example.fred.bluetoothedison;
 import android.annotation.TargetApi;
 import android.app.Activity;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.os.ParcelUuid;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -15,11 +18,20 @@ import android.bluetooth.BluetoothDevice;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
@@ -37,7 +49,14 @@ public class BluetoothActivity extends Activity {
 
     OutputStream outStream = null;
     InputStream inStream = null;
+
     public static ArrayList<String> List = new ArrayList<>();
+    public static ArrayList<Integer> times = new ArrayList<>();
+    public static ArrayList<Float> temp = new ArrayList<>();
+    private String filename;
+    private File dataDir;
+    private File dataFile;
+    Date date;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -49,33 +68,46 @@ public class BluetoothActivity extends Activity {
         Close = (Button)findViewById(R.id.button3);
         Version = (TextView)findViewById(R.id.text1);
         Count = (TextView)findViewById(R.id.text2);
-
+        date = new Date();
         Adapter = BluetoothAdapter.getDefaultAdapter();
+        DateFormat df = new SimpleDateFormat("MM-DD-yyyy");
 
-
+        filename = "/data-" + df.format(date) + ".txt";
+        dataDir =  getStorageFile("TemperatureData");
+        dataFile = new File(dataDir,filename);
 
     }
 
+    // COLLECT DATA
     @TargetApi(Build.VERSION_CODES.KITKAT)
-    public void on(View view) throws IOException {
+    public void getData(View view) throws IOException {
         String msg = "ON";
+        String data = "";
+
         if (outStream == null) {
-            Log.d(TAG, "You have to connect");
+            Log.d(TAG, "ERROR: Bluetooth not connected. Can't read data.");
             return;
         }
+        // Wont respond until edison receives
+        outStream.write(msg.getBytes());
+
+
+        while(inStream.available()<1);
+
+        data  += read();
 
         try {
-            outStream.write(msg.getBytes());
+            FileWriter fw  = new FileWriter(dataFile, true);
+            fw.write(data,0,data.length());
+            fw.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        Log.d(TAG, "LED ON!");
 
-        String v  = read();
+        getDataFromString(data);
 
-        List.add(v);
+        Version.setText("Data Retreived");
 
-        Version.setText("List: " + List);
     }
 
 
@@ -83,11 +115,21 @@ public class BluetoothActivity extends Activity {
         pairedDevices = Adapter.getBondedDevices();
 
         for(BluetoothDevice bt : pairedDevices) {
-            if(bt.getName().equals("edison"))
+            if(bt.getName().toUpperCase().contains("EDISON"))
                 Device = bt;
         }
         Log.d(TAG, "Address: " + Device.getAddress());
         Log.d(TAG, "Name: " + Device.getName());
+        Log.d(TAG, "Name: " + filename);
+
+
+        // Check out the UUIDs
+        ParcelUuid[] uuids = Device.getUuids();
+        for(ParcelUuid uuid: uuids) {
+
+            Log.d(TAG, "UUID\t" + uuid.getUuid().toString());
+        }
+
 
         try {
             BluetoothSocket Socket = Device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"));
@@ -99,6 +141,8 @@ public class BluetoothActivity extends Activity {
 
             outStream = Socket.getOutputStream();
             inStream = Socket.getInputStream();
+
+            while(inStream.available()<1);
 
             String v  = read();
             Version.setText("Version: "+v);
@@ -129,20 +173,45 @@ public class BluetoothActivity extends Activity {
         }
     }
 
-    /*public Integer readInt() throws IOException {
-        byte[] buffer = new byte[64];
-        inStream.read(buffer);
-        Integer s = new Integer(String.valueOf(buffer));
-        return s;
-    }*/
+    // Wrapper for reading input stream
+   private String read() throws IOException {
+        BufferedInputStream btin = null;
+        btin = new BufferedInputStream(inStream);
+        String s = "";
 
-    public String read() throws IOException {
-        byte[] buffer;
-        buffer = new byte[64];
-        inStream.read(buffer);
-        String s = new String(buffer);
-        return s;
+       try{
+           Thread.sleep(500);
+       } catch (InterruptedException e) {
+
+           Log.d(TAG,"Interrupted Exception: ", e);
+
+       }
+
+       while(btin.available()>0) {
+
+           s += (char)btin.read();
+
+       }
+
+       return s;
+
+   }
+
+    // Data processing
+    private void getDataFromString(String s) {
+
+        String lines[] = s.split("\n");
+
+        for(String line : lines) {
+
+            String parts[] = line.split(":");
+
+            times.add(Integer.parseInt(parts[0]));
+            temp.add(Float.parseFloat(parts[1]));
+        }
     }
+
+
 
     public void setArray(ArrayList<String> setArray){
         this.List = setArray;
@@ -195,5 +264,56 @@ public class BluetoothActivity extends Activity {
     /** Called when the user clicks the display data button */
     public void displayData(View view){
 
+
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.setType("plain/text");
+        sendIntent.putExtra(Intent.EXTRA_SUBJECT, "Data from" + date);
+        Uri fileuri = Uri.parse(dataFile.toString());
+        sendIntent.putExtra(Intent.EXTRA_STREAM, fileuri);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, "Data attached");
+        try {
+            startActivity(Intent.createChooser(sendIntent, "Send Mail"));
+        } catch (android.content.ActivityNotFoundException ex) {
+
+            Toast.makeText(getApplicationContext(),
+                    "There are no email clients installed.",
+                    Toast.LENGTH_SHORT).show();
+
+        }
+
+
+
     }
+
+    /* Checks if external storage is available for read and write */
+    public boolean isExternalStorageWritable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    /* Checks if external storage is available to at least read */
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
+
+    public File getStorageFile(String dirName) {
+        // Get the directory for the user's public pictures directory.
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS),dirName);
+        if (!file.mkdirs()) {
+            Log.d(TAG, "Directory not created");
+        }
+        return file;
+    }
+
+
 }
+

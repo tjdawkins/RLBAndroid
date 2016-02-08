@@ -24,5 +24,6 @@
             android:label="@string/title_activity_display_graph" >
         </activity>
     </application>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
 
 </manifest>

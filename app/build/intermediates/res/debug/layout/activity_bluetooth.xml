@@ -36,7 +36,7 @@
 
     <Button
         style="?android:attr/buttonStyleSmall"
-        android:onClick="on"
+        android:onClick="getData"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Collect Data"
@@ -110,4 +110,4 @@
 
 
 
-<!-- From: file:/home/tdawkins/ResLimb/RLB/app/src/main/res/layout/activity_bluetooth.xml -->
+<!-- From: file:/C:/Users/tdawkins/Documents/GitHub/RLB/app/src/main/res/layout/activity_bluetooth.xml -->
