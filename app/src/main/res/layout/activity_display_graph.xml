@@ -11,22 +11,29 @@
     tools:context="com.example.fred.bluetoothedison.displayGraph">
 
 
-    <com.jjoe64.graphview.helper.GraphViewXML
+    <com.jjoe64.graphview.GraphView
         android:layout_width="match_parent"
-        android:id="@+id/graphTest"
-        android:layout_height="400dip"
-        app:seriesData="0=0"/>
+        android:id="@+id/graph"
+        android:layout_height="365dip"/>
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="Version: "
+        android:text="Select Data File:"
         android:id="@+id/text1"
-        android:layout_below="@+id/graphTest"
+        android:layout_below="@+id/graph"
         android:layout_alignParentLeft="true"
-        android:layout_alignParentStart="true"
-        android:layout_marginTop="33dp" />
+        android:layout_alignParentStart="true" />
+
+    <Spinner
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:id="@+id/dataSelectSpinner"
+        android:layout_alignParentRight="true"
+        android:layout_alignParentEnd="true"
+        android:spinnerMode="dialog"
+        android:layout_below="@+id/text1" />
 
 
 </RelativeLayout>

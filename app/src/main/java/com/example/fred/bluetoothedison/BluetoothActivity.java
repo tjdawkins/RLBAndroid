@@ -35,10 +35,14 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
+
+
+
+
 public class BluetoothActivity extends Activity {
 
     private static final String TAG = "BluetoothActivity";
-    public static byte[] passArray;
+    public final static String DATA_DIR = "com.example.fred.bluetoothedison.DATADIR";
 
     Button On,Connect, Close;
     TextView Version, Count;
@@ -70,7 +74,7 @@ public class BluetoothActivity extends Activity {
         Count = (TextView)findViewById(R.id.text2);
         date = new Date();
         Adapter = BluetoothAdapter.getDefaultAdapter();
-        DateFormat df = new SimpleDateFormat("MM-DD-yyyy");
+        DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
 
         filename = "/data-" + df.format(date) + ".txt";
         dataDir =  getStorageFile("TemperatureData");
@@ -211,28 +215,6 @@ public class BluetoothActivity extends Activity {
         }
     }
 
-
-
-    public void setArray(ArrayList<String> setArray){
-        this.List = setArray;
-    }
-
-    public ArrayList<String> getArray(){
-        return(this.List);
-    }
-
-
-    public ArrayList<Byte> testArray(){
-        ArrayList<Byte> testArray = new ArrayList<Byte>();
-
-        for (int i = 0; i < 20; i++)
-        {
-            testArray.add((byte)i);
-        }
-
-        return (testArray);
-    }
-
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -258,6 +240,8 @@ public class BluetoothActivity extends Activity {
     /** Called when the user clicks the display graph button */
     public void displayGraph(View view) {
         Intent intent = new Intent(this, displayGraph.class);
+        intent.putExtra(DATA_DIR,dataDir.toString());
+
         startActivity(intent);
     }
 
