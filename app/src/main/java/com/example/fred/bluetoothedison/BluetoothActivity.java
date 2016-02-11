@@ -61,6 +61,7 @@ public class BluetoothActivity extends Activity {
     private File dataDir;
     private File dataFile;
     Date date;
+    long polltime = System.currentTimeMillis();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,7 +86,7 @@ public class BluetoothActivity extends Activity {
     // COLLECT DATA
     @TargetApi(Build.VERSION_CODES.KITKAT)
     public void getData(View view) throws IOException {
-        String msg = "ON";
+        String msg = "GET_DATA";
         String data = "";
 
         if (outStream == null) {
@@ -98,6 +99,7 @@ public class BluetoothActivity extends Activity {
 
         while(inStream.available()<1);
 
+        polltime = System.currentTimeMillis();
         data  += read();
 
         try {
@@ -205,10 +207,13 @@ public class BluetoothActivity extends Activity {
     private void getDataFromString(String s) {
 
         String lines[] = s.split("\n");
-
+        Date time;
         for(String line : lines) {
 
             String parts[] = line.split(":");
+
+
+            // Add the time from millis since start
 
             times.add(Integer.parseInt(parts[0]));
             temp.add(Float.parseFloat(parts[1]));
@@ -296,6 +301,11 @@ public class BluetoothActivity extends Activity {
             Log.d(TAG, "Directory not created");
         }
         return file;
+    }
+
+    private Date getDateFromMillis(int millis) {
+
+
     }
 
 
