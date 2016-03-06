@@ -37,29 +37,37 @@ import java.util.UUID;
 
 
 
-
-
 public class BluetoothActivity extends Activity {
 
     private static final String TAG = "BluetoothActivity";
     public final static String DATA_DIR = "com.example.fred.bluetoothedison.DATADIR";
 
+    // UI Elements
     Button On,Connect, Close;
     TextView Version, Count;
+
+    // Bluetooth Components
+    private static final UUID SVC_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     BluetoothSocket Socket;
     BluetoothDevice Device = null;
     BluetoothAdapter Adapter;
     Set<BluetoothDevice> pairedDevices;
 
+    // Bluetooth IO
     OutputStream outStream = null;
     InputStream inStream = null;
 
+    // Array Lists for Data
     public static ArrayList<String> List = new ArrayList<>();
     public static ArrayList<Integer> times = new ArrayList<>();
     public static ArrayList<Float> temp = new ArrayList<>();
+
+    // File IO Components
     private String filename;
     private File dataDir;
     private File dataFile;
+
+    // Date Components
     Date date;
     long polltime = System.currentTimeMillis();
 
@@ -138,7 +146,7 @@ public class BluetoothActivity extends Activity {
 
 
         try {
-            BluetoothSocket Socket = Device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"));
+            BluetoothSocket Socket = Device.createRfcommSocketToServiceRecord(SVC_UUID);
 
             if (!Socket.isConnected()){
                 Socket.connect();
@@ -305,9 +313,8 @@ public class BluetoothActivity extends Activity {
 
     private Date getDateFromMillis(int millis) {
 
+        return new Date();
 
     }
-
-
 }
 
