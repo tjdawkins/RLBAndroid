@@ -7,6 +7,8 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Message;
 import android.os.ParcelUuid;
 import android.util.Log;
 import android.view.Menu;
@@ -22,12 +24,10 @@ import android.widget.Toast;
 
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -36,52 +36,154 @@ import java.util.Set;
 import java.util.UUID;
 
 
-
-
-
 public class BluetoothActivity extends Activity {
 
     private static final String TAG = "BluetoothActivity";
     public final static String DATA_DIR = "com.example.fred.bluetoothedison.DATADIR";
 
-    Button On,Connect, Close;
-    TextView Version, Count;
-    BluetoothSocket Socket;
-    BluetoothDevice Device = null;
-    BluetoothAdapter Adapter;
-    Set<BluetoothDevice> pairedDevices;
+    // UI Components
+    Button On, Connect, Close;
+    TextView statusLabel, Count;
 
+    // BLUETOOTH COMMUNICATIONS
+    BluetoothAdapter mAdapter;
+    BluetoothDevice mBTDevice = null;
+    BluetoothSocket Socket;
+    Set<BluetoothDevice> pairedDevices;
     OutputStream outStream = null;
     InputStream inStream = null;
 
+
+    /**
+     * Name of the connected device
+     */
+    private String mConnectedDeviceName = null;
+
+    /**
+     * Member object for the serial service
+     */
+    private BluetoothSerialService mSerialService = null;
+
+    // ArrayLists for data
     public static ArrayList<String> List = new ArrayList<>();
     public static ArrayList<Integer> times = new ArrayList<>();
     public static ArrayList<Float> temp = new ArrayList<>();
+
+    // File IO vars
     private String filename;
     private File dataDir;
     private File dataFile;
+
+    // Try to handle timestamp from data
     Date date;
     long polltime = System.currentTimeMillis();
+
+
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_bluetooth);
 
+        setContentView(R.layout.activity_bluetooth);
         Connect = (Button)findViewById(R.id.button1);
         On = (Button)findViewById(R.id.button2);
         Close = (Button)findViewById(R.id.button3);
-        Version = (TextView)findViewById(R.id.text1);
+        statusLabel = (TextView)findViewById(R.id.text1);
         Count = (TextView)findViewById(R.id.text2);
-        date = new Date();
-        Adapter = BluetoothAdapter.getDefaultAdapter();
-        DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
 
+        mAdapter = BluetoothAdapter.getDefaultAdapter();
+
+        // If the adapter is null, then Bluetooth is not supported
+        if (mAdapter == null) {
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show();
+        }
+
+        // Local data file naming and handle
+        date = new Date();
+        DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
         filename = "/data-" + df.format(date) + ".txt";
         dataDir =  getStorageFile("TemperatureData");
         dataFile = new File(dataDir,filename);
 
     }
+
+    @Override
+    public void onStart() {
+
+        super.onStart();
+
+        if(mSerialService == null)
+            setupSerial();
+
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        if (mSerialService != null) {
+            mSerialService.stop();
+        }
+    }
+
+    /*
+     * Setup the serial service
+     */
+    private void setupSerial() {
+
+        Log.d(TAG, "setupSerial()");
+        mSerialService = new BluetoothSerialService(this,mHandler);
+
+    }
+
+
+    public void connect(View view){
+
+        pairedDevices = mAdapter.getBondedDevices();
+
+        for(BluetoothDevice bt : pairedDevices) {
+            if(bt.getName().toUpperCase().contains("EDISON"))
+                mBTDevice = bt;
+        }
+
+        Log.d(TAG, "Address: " + mBTDevice.getAddress());
+        Log.d(TAG, "Name: " + mBTDevice.getName());
+        Log.d(TAG, "Name: " + filename);
+
+
+        // Check out the UUIDs
+        ParcelUuid[] uuids = mBTDevice.getUuids();
+        for(ParcelUuid uuid: uuids) {
+
+            Log.d(TAG, "UUID\t" + uuid.getUuid().toString());
+        }
+
+        mSerialService.connect(mBTDevice);
+
+/*        try {
+            BluetoothSocket Socket = mBTDevice.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"));
+
+            if (!Socket.isConnected()){
+                Socket.connect();
+                Log.d(TAG, "Connected");
+            }
+
+            outStream = Socket.getOutputStream();
+            inStream = Socket.getInputStream();
+
+            while(inStream.available()<1);
+
+            String v  = read();
+            statusLabel.setText("Version: " + v);
+            Count.setText("Count: 0");
+
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            Log.d(TAG,"DEBUG: Couldn't create Socket.");
+            e.printStackTrace();
+        }*/
+    }
+
 
     // COLLECT DATA
     @TargetApi(Build.VERSION_CODES.KITKAT)
@@ -100,6 +202,8 @@ public class BluetoothActivity extends Activity {
         while(inStream.available()<1);
 
         polltime = System.currentTimeMillis();
+
+        // Read data from stream
         data  += read();
 
         try {
@@ -112,52 +216,8 @@ public class BluetoothActivity extends Activity {
 
         getDataFromString(data);
 
-        Version.setText("Data Retreived");
+        statusLabel.setText("Data Retreived");
 
-    }
-
-
-    public void connect(View view){
-        pairedDevices = Adapter.getBondedDevices();
-
-        for(BluetoothDevice bt : pairedDevices) {
-            if(bt.getName().toUpperCase().contains("EDISON"))
-                Device = bt;
-        }
-        Log.d(TAG, "Address: " + Device.getAddress());
-        Log.d(TAG, "Name: " + Device.getName());
-        Log.d(TAG, "Name: " + filename);
-
-
-        // Check out the UUIDs
-        ParcelUuid[] uuids = Device.getUuids();
-        for(ParcelUuid uuid: uuids) {
-
-            Log.d(TAG, "UUID\t" + uuid.getUuid().toString());
-        }
-
-
-        try {
-            BluetoothSocket Socket = Device.createRfcommSocketToServiceRecord(UUID.fromString("00001101-0000-1000-8000-00805f9b34fb"));
-
-            if (!Socket.isConnected()){
-                Socket.connect();
-                Log.d(TAG, "Connected");
-            }
-
-            outStream = Socket.getOutputStream();
-            inStream = Socket.getInputStream();
-
-            while(inStream.available()<1);
-
-            String v  = read();
-            Version.setText("Version: "+v);
-            Count.setText("Count: 0");
-
-        } catch (IOException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
     }
 
     public void close(View view) {
@@ -186,7 +246,9 @@ public class BluetoothActivity extends Activity {
         String s = "";
 
        try{
+
            Thread.sleep(500);
+
        } catch (InterruptedException e) {
 
            Log.d(TAG,"Interrupted Exception: ", e);
@@ -305,9 +367,61 @@ public class BluetoothActivity extends Activity {
 
     private Date getDateFromMillis(int millis) {
 
-
+        return new Date();
     }
-
+    /**
+     * The Handler that gets information back from the BluetoothChatService
+     */
+    private final Handler mHandler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case Constants.MESSAGE_STATE_CHANGE:
+                    switch (msg.arg1) {
+                        case BluetoothSerialService.STATE_CONNECTED:
+                            // Print the status
+                            statusLabel.setText("Connected");
+                            break;
+                        case BluetoothSerialService.STATE_CONNECTING:
+                            statusLabel.setText("Connecting...");
+                            break;
+                        case BluetoothSerialService.STATE_NONE:
+                            statusLabel.setText("Not Connected");
+                            break;
+                    }
+                    break;
+                case Constants.MESSAGE_WRITE:
+                    // WRITE ACTION
+                    byte[] writeBuf = (byte[]) msg.obj;
+                    // construct a string from the buffer
+                    String writeMessage = new String(writeBuf);
+                    //mConversationArrayAdapter.add("Me:  " + writeMessage);
+                    break;
+                case Constants.MESSAGE_READ:
+                    // READ ACTION RETURNS BUFFER
+                    byte[] readBuf = (byte[]) msg.obj;
+                    // construct a string from the valid bytes in the buffer
+                    String readMessage = new String(readBuf, 0, msg.arg1);
+                    //mConversationArrayAdapter.add(mConnectedDeviceName + ":  " + readMessage);
+                    break;
+                case Constants.MESSAGE_DEVICE_NAME:
+                    // save the connected device's name
+                    mConnectedDeviceName = msg.getData().getString(Constants.DEVICE_NAME);
+                    if (null != getParent()) {
+                        Toast.makeText(getParent(), "Connected to "
+                                + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+                case Constants.MESSAGE_TOAST:
+                    if (null != getParent()) {
+                        Toast.makeText(getParent(), msg.getData().getString(Constants.TOAST),
+                                Toast.LENGTH_SHORT).show();
+                    }
+                    break;
+            }
+        }
+    };
 
 }
+
 
