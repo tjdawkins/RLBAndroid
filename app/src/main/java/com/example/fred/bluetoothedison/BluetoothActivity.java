@@ -58,7 +58,6 @@ public class BluetoothActivity extends Activity {
     InputStream inStream = null;
 
     // Array Lists for Data
-    public static ArrayList<String> List = new ArrayList<>();
     public static ArrayList<Integer> times = new ArrayList<>();
     public static ArrayList<Float> temp = new ArrayList<>();
 
@@ -169,8 +168,7 @@ public class BluetoothActivity extends Activity {
     }
 
     public void close(View view) {
-        List.clear();
-        Count.setText("List: clear");
+
         if (inStream != null) {
             try {inStream.close();} catch (Exception e) {}
             inStream = null;
