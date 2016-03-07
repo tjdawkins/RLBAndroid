@@ -22,12 +22,10 @@ import android.widget.Toast;
 
 import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -44,7 +42,9 @@ public class BluetoothActivity extends Activity {
 
     // UI Elements
     Button On,Connect, Close;
-    TextView Version, Count;
+    TextView statusLabel, detailsLabel;
+    String status;
+    String details;
 
     // Bluetooth Components
     private static final UUID SVC_UUID = UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
@@ -58,7 +58,8 @@ public class BluetoothActivity extends Activity {
     InputStream inStream = null;
 
     // Array Lists for Data
-    public static ArrayList<Integer> times = new ArrayList<>();
+    //public static ArrayList<Integer> times = new ArrayList<>();
+    public static ArrayList<Date> times = new ArrayList<>();
     public static ArrayList<Float> temp = new ArrayList<>();
 
     // File IO Components
@@ -78,8 +79,14 @@ public class BluetoothActivity extends Activity {
         Connect = (Button)findViewById(R.id.button1);
         On = (Button)findViewById(R.id.button2);
         Close = (Button)findViewById(R.id.button3);
-        Version = (TextView)findViewById(R.id.text1);
-        Count = (TextView)findViewById(R.id.text2);
+        statusLabel = (TextView)findViewById(R.id.text1);
+        detailsLabel = (TextView)findViewById(R.id.text2);
+
+        status = "Status: Not Connected";
+        details = "INFO: Press Connect to connect";
+        statusLabel.setText(status);
+        detailsLabel.setText(details);
+
         date = new Date();
         Adapter = BluetoothAdapter.getDefaultAdapter();
         DateFormat df = new SimpleDateFormat("MM-dd-yyyy");
@@ -90,41 +97,22 @@ public class BluetoothActivity extends Activity {
 
     }
 
-    // COLLECT DATA
-    @TargetApi(Build.VERSION_CODES.KITKAT)
-    public void getData(View view) throws IOException {
-        String msg = "GET_DATA";
-        String data = "";
+    @Override
+    protected void onStart() {
 
-        if (outStream == null) {
-            Log.d(TAG, "ERROR: Bluetooth not connected. Can't read data.");
-            return;
-        }
-        // Wont respond until edison receives
-        outStream.write(msg.getBytes());
+        super.onStart();
 
+        statusLabel.setText(status);
+        detailsLabel.setText(details);
 
-        while(inStream.available()<1);
-
-        polltime = System.currentTimeMillis();
-        data  += read();
-
-        try {
-            FileWriter fw  = new FileWriter(dataFile, true);
-            fw.write(data,0,data.length());
-            fw.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        getDataFromString(data);
-
-        Version.setText("Data Retreived");
 
     }
-
-
     public void connect(View view){
+        status = "Status: Connecting..." ;
+        details = "INFO: Establishing Connection";
+        statusLabel.setText(status);
+        detailsLabel.setText(details);
+
         pairedDevices = Adapter.getBondedDevices();
 
         for(BluetoothDevice bt : pairedDevices) {
@@ -158,17 +146,80 @@ public class BluetoothActivity extends Activity {
             while(inStream.available()<1);
 
             String v  = read();
-            Version.setText("Version: "+v);
-            Count.setText("Count: 0");
+            details = "INFO: " + v;
 
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+        status = "Status: Connected" ;
+        statusLabel.setText(status);
+        detailsLabel.setText(details);
+    }
+
+
+    // COLLECT DATA
+    @TargetApi(Build.VERSION_CODES.KITKAT)
+    public void getData(View view) throws IOException {
+        detailsLabel.setText("Getting Data...");
+        String msg = "GET_DATA";
+        String data = "";
+        int dataAvailable = -1;
+
+
+        if (outStream == null) {
+            Log.d(TAG, "ERROR: Bluetooth not connected. Can't read data.");
+            details = "ERROR: Device not connected.";
+            detailsLabel.setText(details);
+            return;
+        }
+        // Wont respond until edison receives
+        outStream.write((new String("CHECK_DATA")).getBytes());
+
+        while(inStream.available()<1); // This is bad. Need to handle in threads it's blocking
+
+        dataAvailable = Integer.parseInt(read());
+
+        if(dataAvailable < 1) {
+            details = "ERROR: No Data Available on Edison";
+            detailsLabel.setText(details);
+            return;
+
+        }
+
+        // Get the available data
+        outStream.write(msg.getBytes());
+        while(inStream.available()<1); // So bad, but if not it misses data
+        data  += read();
+        polltime = System.currentTimeMillis();
+
+        try {
+            FileWriter fw  = new FileWriter(dataFile, true);
+            fw.write(data,0,data.length());
+            fw.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        getDataFromString(data);
+        details = "INFO: Data Received";
+        detailsLabel.setText(details);
+
     }
 
     public void close(View view) {
-
+        details = "INFO: Disconnecting...";
+        detailsLabel.setText(details);
+        try {
+            outStream.write((new String("CLOSE")).getBytes());
+        } catch (IOException e ) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        status = "Status: Not Connected";
+        details = "INFO: Disconnected...";
+        statusLabel.setText(status);
+        detailsLabel.setText(details);
         if (inStream != null) {
             try {inStream.close();} catch (Exception e) {}
             inStream = null;
@@ -220,8 +271,14 @@ public class BluetoothActivity extends Activity {
 
 
             // Add the time from millis since start
+            int seconds = Integer.parseInt(parts[0]);
+            time = new java.util.Date((long)seconds);
+            DateFormat df = new SimpleDateFormat("MM-dd-yyyy hh:mm:ss");
 
-            times.add(Integer.parseInt(parts[0]));
+            Log.d(TAG, "Integer: " + seconds + "Date: " + df.format(time));
+
+
+            times.add(time);
             temp.add(Float.parseFloat(parts[1]));
         }
     }
@@ -257,6 +314,7 @@ public class BluetoothActivity extends Activity {
     }
 
     /** Called when the user clicks the display data button */
+    // TODO: EMAIL FILE NOT WORKING
     public void displayData(View view){
 
 
@@ -309,10 +367,5 @@ public class BluetoothActivity extends Activity {
         return file;
     }
 
-    private Date getDateFromMillis(int millis) {
-
-        return new Date();
-
-    }
 }
 

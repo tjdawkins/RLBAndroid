@@ -15,6 +15,7 @@ import android.widget.TextView;
 
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.Viewport;
+import com.jjoe64.graphview.helper.DateAsXAxisLabelFormatter;
 import com.jjoe64.graphview.series.BarGraphSeries;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
@@ -24,7 +25,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 
 public class displayGraph extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
@@ -38,6 +42,8 @@ public class displayGraph extends AppCompatActivity implements AdapterView.OnIte
     LineGraphSeries<DataPoint> series;
     DataPoint points[];
     GraphView graph;
+    long first;
+    long last;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,18 +128,38 @@ public class displayGraph extends AppCompatActivity implements AdapterView.OnIte
         // Array list to store the points
         ArrayList<DataPoint> pointArrayList = new ArrayList<>();
         String data;
+        long seconds;
+        Date date = new Date();
+        int n = 0;
 
         try {
             // Read the file out and drop the points in the arraylist
             BufferedReader b = new BufferedReader(new FileReader(f));
             while ((data = b.readLine()) != null) {
 
-            String points[] = data.split(":");
-            pointArrayList.add(new DataPoint(Double.parseDouble(points[0]),
-                    Double.parseDouble(points[1])));
+                String points[] = data.split(":");
+                //pointArrayList.add(new DataPoint(Double.parseDouble(points[0])
+                seconds = Integer.parseInt(points[0]);
+                date = new java.util.Date(seconds);
+                if(n == 0)
+                    first = date.getTime();
+
+                DateFormat df = new SimpleDateFormat("MM-dd-yyyy hh:mm:ss");
+
+                Log.d(TAG, "Integer: " + seconds + "Date: " + df.format(date));
+
+                pointArrayList.add(new DataPoint(1000*seconds,
+                        Double.parseDouble(points[1])));
+
+                n++;
 
             }
 
+            last = date.getTime();
+
+
+            Log.d(TAG, "First: " + first);
+            Log.d(TAG, "Last: " + last);
             // Populate the data points with the array
             //this.points = (DataPoint[])pointArrayList.toArray();
             this.points = pointArrayList.toArray(new DataPoint[pointArrayList.size()]);
@@ -147,7 +173,13 @@ public class displayGraph extends AppCompatActivity implements AdapterView.OnIte
 
         // Add it to the graph
         graph.addSeries(series);
+        graph.getGridLabelRenderer().setLabelFormatter(new DateAsXAxisLabelFormatter(this));
+        graph.getGridLabelRenderer().setNumHorizontalLabels(3);
+        graph.getViewport().setMinX(first*1000);
+        graph.getViewport().setMaxX(last*1000);
+        graph.getViewport().setXAxisBoundsManual(true);
 
+        graph.refreshDrawableState();
 
 
 
